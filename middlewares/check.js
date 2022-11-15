@@ -6,7 +6,7 @@ const auth = require("../middlewares/checkAu")
 
 exports.isAuth = async (req, res, next) => {
 	// Lấy access token từ header
-	const accessTokenFromHeader = req.headers.x_authorization;
+	const accessTokenFromHeader = req.headers.authorization;
 	if (!accessTokenFromHeader) {
 		return res.status(401).send('Không tìm thấy access token!');
 	}

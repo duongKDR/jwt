@@ -3,22 +3,20 @@ const userModel = require("../models/userModel")
 const postModel = require("../models/post")
 const bcrypt = require("bcrypt");
 const { role, ROLES } = require('../models/index');
-
-var refreshTokens = {};
+var refreshToken = {};
 const auth = require("../middlewares/checkAu")
 
-const CheckToken = require("../middlewares/checkToken")
-const authAdmin = require("../middlewares/checkAdmin")
-const userAuth = require("../middlewares/checkUser");
+
+
 const e = require('cors');
 
 
 exports.getRegister = (req, res, next) => {
-   
+
     res.render("register");
 };
 exports.getLogin = (req, res, next) => {
-  
+
     res.render("login");
 };
 
@@ -40,7 +38,7 @@ exports.postRegister = async (req, res, next) => {
             return res.json(500).message("Role is not found.");
         }
 
-        console.log(req.body);
+        // console.log(req.body);
 
         let registerRequestModel = new userModel({
             username: req.body.username,
@@ -60,14 +58,14 @@ exports.postRegister = async (req, res, next) => {
 exports.postLogin = async (req, res, next) => {
     try {
 
-        console.log( "goi ham login");
-        
+        console.log("goi ham login");
+
         const { username, password } = req.body
-        console.log( req)
+        console.log(req)
         console.log("==> '" + username + "'");
         const user = await userModel.findOne({ username })
         if (!user) return res.status(400).json({ msg: " Username ko tồn tại" })
- 
+
         const isMatch = await bcrypt.compare(password, user.password)
         if (!isMatch) return res.status(400).json({ msg: "Mật khẩu sai" })
 
@@ -102,82 +100,41 @@ exports.postLogin = async (req, res, next) => {
             refreshTokenLife
 
         );
-        if (!user.refreshToken) {
-            // Nếu user này chưa có refresh token thì lưu refresh token đó vào database
-            // await userModel.updateRefreshToken(user.username, refreshToken);
-        } else {
-            // Nếu user này đã có refresh token thì lấy refresh token đó từ database
-            refreshToken = user.refreshToken;
-        }
-        // if (user.role == "admin") {
-        //     const users = await userModel.find();
-        //     const options = {
-        //         expires: new Date(
-        //             Date.now() + 2 * 24 * 60 * 60 * 1000
-        //         ),
-        //         httpOnly: true
-        //     };
-        //     res.cookie("token", accessToken, options).render('list', {
-        //         users,
-        //     })
-        //     console.log("-----------------");
+ 
 
-        //     res.end();
-
-
-        // }
-        // return res.status(200).cookie("token", accessToken, { expire: new Date(3600 + Date.now()) }).redirect('post')
-        // //    .clearCookie('username')
-
-
-        console.log( "goi ham login ok");
+        console.log("goi ham login ok");
         return res.json({
             msg: 'Đăng nhập thành công.',
             accessToken,
             refreshToken,
             user,
         });
-      
+
 
     } catch (error) {
         console.log(error);
         // res.status(500).send(error.message)
     }
 };
-async function handler (req, res) {
-    console.log( "hello")
-    
-
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-
-
-let token = req.headers.authorization.replace("Bearer ","");
-
-
-
-
-
-console.log(req.headers);
-const data  = await auth.decoToken(token,accessTokenSecret)
-console.log( data);
-console.log(token);
-    }
-  
-exports.hello = async (req, res) => {
-    // console.log( "hello")
-    
-    // const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-
-
-    // let token = req.headers.authorization.replace("Bearer ","");
+async function handler(req, res) {
+    console.log("hello")
+    const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+    let token = req.headers.authorization.replace("Bearer ", "");
+    console.log(token);
     // console.log(req.headers);
-    // const data  = await auth.decoToken(token,accessTokenSecret)
-    // console.log( data);
-    // console.log(token);
-    // console.log(data.payload.role)
-    // asyncCall()
-    handler();
-    if(data.payload.role == "admin") {
+    let data = await auth.decoToken(token, accessTokenSecret)
+    // console.log(data);
+    return data;
+
+}
+
+exports.list = async (req, res) => {
+
+    var data = await handler(req, res);
+    let token = req.headers.authorization.replace("Bearer ", "");
+    console.log(" dl");
+    console.log(data);
+    if (data.payload.role == "admin") {
         const users = await userModel.find();
         const options = {
             expires: new Date(
@@ -186,40 +143,72 @@ exports.hello = async (req, res) => {
             httpOnly: true
         };
         res.cookie("token", token, options).render('list', {
-                    users,
-                }) 
+            users,
+        })
         console.log("-----------------");
         // form = async (req, res) => {
         //    res.render('form') 
         // }
-            console.log( "hello")
+        console.log("hello")
         res.end();
-        
-    }else{
+
+    } else {
         res.status(401)
-			.send('Bạn không có quyền truy cập vào tính năng này!');
+            .send('Bạn không có quyền truy cập vào tính năng này!');
     }
     res.status(200);
-} 
+}
 
 
-// exports.list = async(req, res) => {
-//     asyncCall()
-//     if(data.payload.role == "admin") {
-//         const users = await userModel.find();
-//         const options = {
-//             expires: new Date(
-//                 Date.now() + 2 * 24 * 60 * 60 * 1000
-//             ),
-//             httpOnly: true
-//         };
-//         res.cookie("token", token, options).render('list', {
-//         users,
-//     }) 
-// }
-// exports.form = async(req, res) =>{
-//     const data  = await auth.decoToken(token,accessTokenSecret)
-//     if(data.payload.role == "admin") {
-//         console.log(data.payload.role);
-//     }
-// }
+exports.form = async (req, res) => {
+    var data = await handler(req, res);
+    let token = req.headers.authorization.replace("Bearer ", "");
+
+    if (data.payload.role == "admin") {
+
+        const options = {
+            expires: new Date(
+                Date.now() + 2 * 24 * 60 * 60 * 1000
+            ),
+            httpOnly: true
+        };
+
+        res.cookie("token", token, options).render('form')
+
+        console.log("-----------------")
+        console.log("form")
+        res.end();
+
+    } else {
+        res.status(401)
+            .send('Bạn không có quyền truy cập vào tính năng này!');
+    }
+    res.status(200);
+
+
+}
+
+exports.crForm = async (req, res) => {
+    try {
+        if (!req.body.username || !req.body.content || !req.body.description) {
+            return res.json(" vui long nhap lai")
+        }
+
+        const { title } = req.body
+        const name = await postModel.findOne({ title })
+        if (name) return res.status(400).json({ msg: " Name da tồn tại" })
+
+
+        let formRequestModel = new postModel({
+            username: req.body.username,
+            password: hashPassword,
+            role: req.body.role
+
+        })
+        return res.send("Đăng thành công!");
+
+    } catch (error) {
+        res.status(500).send(error.message)
+    }
+}
+

@@ -6,6 +6,6 @@ const db = {};
 db.user = require("./userModel");
 
 
-db.ROLES = ["user", "admin", "moderator"];
+db.ROLES = ["user", "admin"];
 
 module.exports = db;
