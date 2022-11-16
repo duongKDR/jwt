@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 exports.generateToken = async (payload, secretSignature, tokenLife) => {
 	try {
-		return await jwt.sign(
+		return jwt.sign(
 			{
 				payload,
 			},
@@ -10,7 +10,7 @@ exports.generateToken = async (payload, secretSignature, tokenLife) => {
 			{
 				algorithm: 'HS256',
 				expiresIn: tokenLife,
-			},
+			}
 		);
 	} catch (error) {
 		console.log(`Error in generate access token:  + ${error}`);
@@ -21,7 +21,7 @@ exports.generateToken = async (payload, secretSignature, tokenLife) => {
 
 exports.refToken = async (payload, secretSignature, refreshLife ) => {
 	try {
-		return await jwt.sign(
+		return jwt.sign(
 			{
 				payload,
 			},
@@ -29,16 +29,18 @@ exports.refToken = async (payload, secretSignature, refreshLife ) => {
 			{
 				algorithm: 'HS256',
 				expiresIn: refreshLife,
-			},
+			}
 		);
 	} catch (error) {
-		console.log(`Error in generate access token:  + ${error}`);
+		console.log(`Error in ref access token:  + ${error}`);
 		return null;
 	}
 };
 exports.verifyToken = async (token, secretKey) => {
+	console.log(token,secretKey);
 	try {
-		return await jwt.verify(token, secretKey);
+		//kiem tra tw
+		return jwt.verify(token, secretKey);
 	} catch (error) {
 		console.log(`Error in verify access token:  + ${error}`);
 		return null;
@@ -47,7 +49,7 @@ exports.verifyToken = async (token, secretKey) => {
 exports.decoToken =  async ( token , secretKey ) => {
 	try {
 		
-		return await jwt.decode( token, secretKey);
+		return jwt.decode(token, secretKey);
 	} catch (error) {
 		
 		return null;

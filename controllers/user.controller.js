@@ -2,12 +2,9 @@ var jwt = require('jsonwebtoken');
 const userModel = require("../models/userModel")
 const postModel = require("../models/post")
 const bcrypt = require("bcrypt");
-const { role, ROLES } = require('../models/index');
+const { role, ROLES } = require('../models/role');
 var refreshToken = {};
 const auth = require("../middlewares/checkAu")
-
-
-
 const e = require('cors');
 
 
@@ -46,7 +43,7 @@ exports.postRegister = async (req, res, next) => {
             role: req.body.role
 
         })
-        let result = await registerRequestModel.save()
+        let result =  registerRequestModel.save()
         // res.json(result)
         return res.send("Đăng kí thành công!");
 
@@ -61,12 +58,12 @@ exports.postLogin = async (req, res, next) => {
         console.log("goi ham login");
 
         const { username, password } = req.body
-        console.log(req)
+        // console.log(req)
         console.log("==> '" + username + "'");
         const user = await userModel.findOne({ username })
         if (!user) return res.status(400).json({ msg: " Username ko tồn tại" })
 
-        const isMatch = await bcrypt.compare(password, user.password)
+        const isMatch =  bcrypt.compare(password, user.password)
         if (!isMatch) return res.status(400).json({ msg: "Mật khẩu sai" })
 
         const accessTokenLife = process.env.ACCESS_TOKEN_LIFE;
@@ -94,16 +91,25 @@ exports.postLogin = async (req, res, next) => {
                 .send(' loi vui lòng thử lại sau.');
         }
 
-        let refreshToken = auth.refToken(
+        let refreshToken = await auth.refToken(
             conF,
             accessTokenSecret,
             refreshTokenLife
 
         );
- 
 
-        console.log("goi ham login ok");
-        return res.json({
+        const option1 = {
+            accessTokenLife,
+            httpOnly: true
+        };
+        const option2 = {
+            refreshTokenLife,
+            httpOnly: true
+        };
+
+       
+        // console.log("goi ham login ok");
+        return res.cookie("REtoken", refreshToken ,option2 ).cookie("token", accessToken,option1 ).json({
             msg: 'Đăng nhập thành công.',
             accessToken,
             refreshToken,
@@ -116,24 +122,42 @@ exports.postLogin = async (req, res, next) => {
         // res.status(500).send(error.message)
     }
 };
-async function handler(req, res) {
-    console.log("hello")
+async function check(req, res) {
+
+    // console.log("hello")
     const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
     let token = req.headers.authorization.replace("Bearer ", "");
-    console.log(token);
-    // console.log(req.headers);
+    // console.log(token);
+
+    // jwt.verify(token, accessTokenSecret, function (err, token) {
+    //     if (err) {
+    //         console.log("loi sai")
+    //       return res.status(401).send("da het han")
+
+    //     }
+    //     console.log(token);
+
+    // });
+    let verify = await auth.verifyToken(token, accessTokenSecret)
+    if (verify == null) {
+        return null;
+    }
     let data = await auth.decoToken(token, accessTokenSecret)
     // console.log(data);
     return data;
-
 }
 
 exports.list = async (req, res) => {
 
-    var data = await handler(req, res);
+    var data = await check(req, res);
+    if (data == null) {
+        console.log("loi sai")
+        return res.status(401).send("da het han token")
+
+    }
     let token = req.headers.authorization.replace("Bearer ", "");
-    console.log(" dl");
-    console.log(data);
+    // console.log(" dl");
+    // console.log(data);
     if (data.payload.role == "admin") {
         const users = await userModel.find();
         const options = {
@@ -142,7 +166,8 @@ exports.list = async (req, res) => {
             ),
             httpOnly: true
         };
-        res.cookie("token", token, options).render('list', {
+        console.log(refreshToken)
+        res.cookie("token", token,"reftoken", refreshToken, options).render('list', {
             users,
         })
         console.log("-----------------");
@@ -161,7 +186,12 @@ exports.list = async (req, res) => {
 
 
 exports.form = async (req, res) => {
-    var data = await handler(req, res);
+    var data = await check(req, res);
+    if (data == null) {
+        console.log("loi sai")
+        return res.status(401).send("da het han token")
+
+    }
     let token = req.headers.authorization.replace("Bearer ", "");
 
     if (data.payload.role == "admin") {
@@ -172,9 +202,7 @@ exports.form = async (req, res) => {
             ),
             httpOnly: true
         };
-
-        res.cookie("token", token, options).render('form')
-
+        res.cookie("token", token,"reftoken", refreshToken,options).render('form')
         console.log("-----------------")
         console.log("form")
         res.end();
@@ -211,4 +239,47 @@ exports.crForm = async (req, res) => {
         res.status(500).send(error.message)
     }
 }
+exports.home = async( req,res) => {
+    var data = await check(req, res);
+    if (data == null) {
+        console.log("loi sai")
+        return res.status(401).send("da het han token")
+
+    }
+    res.json("xin chao")
+
+}
+exports.refreshToken = async (req, res) => {
+
+    const user = userModel.findOne({ username: req.user.username });
+    if (!user) {
+        return res.status(401).send('User ko ton tai');
+
+    }
+
+
+    const dataForAccessToken = {
+        username: user.username,
+        role: user.role,
+
+    };
+    const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+    const accessTokenLife = process.env.ACCESS_TOKEN_LIFE;
+
+    const accessToken = await auth.generateToken(
+        dataForAccessToken,
+        accessTokenSecret,
+        accessTokenLife,
+    );
+
+    if (!accessToken) {
+        return res
+            .status(400)
+            .send('Tạo access token không thành công, vui lòng thử lại.');
+    }
+    return res.json({
+        accessToken,
+    });
+}
+
 
