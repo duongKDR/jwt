@@ -199,8 +199,7 @@ exports.form = async (req, res) => {
         const options = {
             expires: new Date(
                 Date.now() + 2 * 24 * 60 * 60 * 1000
-            ),
-            httpOnly: true
+            )
         };
         res.cookie("token", token,"reftoken", refreshToken,options).render('form')
         console.log("-----------------")
