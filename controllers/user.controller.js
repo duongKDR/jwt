@@ -1,6 +1,7 @@
 var jwt = require('jsonwebtoken');
 const userModel = require("../models/userModel")
 const postModel = require("../models/post")
+
 const bcrypt = require("bcrypt");
 const { role, ROLES } = require('../models/role');
 var refreshToken = {};
@@ -23,7 +24,7 @@ exports.postRegister = async (req, res, next) => {
             return res.json(" vui long nhap lai")
         }
 
-        const { username, password } = req.body
+        const { username, password, fullname,email} = req.body
         const user = await userModel.findOne({ username })
         if (user) return res.status(400).json({ msg: " Username da tồn tại" })
 
@@ -38,7 +39,9 @@ exports.postRegister = async (req, res, next) => {
         // console.log(req.body);
 
         let registerRequestModel = new userModel({
+            fullname:req.body.fullname,
             username: req.body.username,
+            email: req.body.email,
             password: hashPassword,
             role: req.body.role
 
@@ -63,7 +66,7 @@ exports.postLogin = async (req, res, next) => {
         const user = await userModel.findOne({ username })
         if (!user) return res.status(400).json({ msg: " Username ko tồn tại" })
 
-        const isMatch =  bcrypt.compare(password, user.password)
+        const isMatch = await  bcrypt.compare(password, user.password)
         if (!isMatch) return res.status(400).json({ msg: "Mật khẩu sai" })
 
         const accessTokenLife = process.env.ACCESS_TOKEN_LIFE;
@@ -123,21 +126,8 @@ exports.postLogin = async (req, res, next) => {
     }
 };
 async function check(req, res) {
-
-    // console.log("hello")
     const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
     let token = req.headers.authorization.replace("Bearer ", "");
-    // console.log(token);
-
-    // jwt.verify(token, accessTokenSecret, function (err, token) {
-    //     if (err) {
-    //         console.log("loi sai")
-    //       return res.status(401).send("da het han")
-
-    //     }
-    //     console.log(token);
-
-    // });
     let verify = await auth.verifyToken(token, accessTokenSecret)
     if (verify == null) {
         return null;
@@ -146,7 +136,28 @@ async function check(req, res) {
     // console.log(data);
     return data;
 }
+exports.list = async(req,res) => {
+//    const data =  [
+//         { alertCount: 5 },
+//         { CaseResolvedCount: 1, caseOpenCount: 1 },
+//         { caseFalsePositiveCount: 1 },
+//         { caseCount: 2 }]
 
+// //  let re = new postSchema ({
+// //     data: data
+// // });
+//     // await re.save()
+//     const lastData = await postSchema.find().sort({ timestampField: -1 }).limit(1);
+
+//     let newE = [
+//      ...   lastData[0].data,
+      
+//     ]
+//     newE.polarAreaChartStatisticCase = lastData[0].data[0]
+//     console.log("lấn",newE);
+    
+//     return res.status(200).send(newE)
+}
 exports.list = async (req, res) => {
 
     var data = await check(req, res);
@@ -156,8 +167,7 @@ exports.list = async (req, res) => {
 
     }
     let token = req.headers.authorization.replace("Bearer ", "");
-    // console.log(" dl");
-    // console.log(data);
+
     if (data.payload.role == "admin") {
         const users = await userModel.find();
         const options = {
@@ -171,9 +181,7 @@ exports.list = async (req, res) => {
             users,
         })
         console.log("-----------------");
-        // form = async (req, res) => {
-        //    res.render('form') 
-        // }
+
         console.log("hello")
         res.end();
 
@@ -217,7 +225,7 @@ exports.form = async (req, res) => {
 
 exports.crForm = async (req, res) => {
     try {
-        if (!req.body.username || !req.body.content || !req.body.description) {
+        if (!req.body.title || !req.body.content || !req.body.description) {
             return res.json(" vui long nhap lai")
         }
 
@@ -226,12 +234,12 @@ exports.crForm = async (req, res) => {
         if (name) return res.status(400).json({ msg: " Name da tồn tại" })
 
 
-        let formRequestModel = new postModel({
-            username: req.body.username,
-            password: hashPassword,
-            role: req.body.role
+        // let formRequestModel = new postModel({
+        //     username: req.body.username,
+        //     password: hashPassword,
+        //     role: req.body.role
 
-        })
+        // })
         return res.send("Đăng thành công!");
 
     } catch (error) {
@@ -245,7 +253,11 @@ exports.home = async( req,res) => {
         return res.status(401).send("da het han token")
 
     }
-    res.json("xin chao")
+ 
+
+    const user = await userModel.findOne({ username:data.payload.username });
+    
+    res.json(user)
 
 }
 exports.refreshToken = async (req, res) => {
@@ -260,7 +272,6 @@ exports.refreshToken = async (req, res) => {
     const dataForAccessToken = {
         username: user.username,
         role: user.role,
-
     };
     const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
     const accessTokenLife = process.env.ACCESS_TOKEN_LIFE;
